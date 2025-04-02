@@ -1,0 +1,158 @@
+\chapter{Méthodologie}
+
+\section{Protocole de Simulation}
+Nous avons développé un protocole de simulation des interactions multi-matériaux en utilisant la bibliothèque \textbf{Polyfem}. Cette approche tire parti des capacités de notre PC, exploitant à la fois le CPU et le GPU pour optimiser les calculs. Les résultats des simulations sont exportés sous les formats \texttt{.pvd}, \texttt{.vtm} et \texttt{.vtu}, contenant des informations essentielles telles que les forces de contact, les contraintes de Cauchy, les tenseurs de Piola (premier et second ordre) et les contraintes de Von Mises.
+
+\section{Protocole de Test Expérimental}
+Pour valider nos simulations, nous avons réalisé des tests expérimentaux en laboratoire. L'objectif est de comparer les coefficients de frottement obtenus par simulation avec ceux mesurés expérimentalement. Les surfaces testées ont été générées via plusieurs méthodes :
+\begin{itemize}
+    \item \textbf{Scans 3D :} Utilisation de scanners 3D de haute précision pour capturer les détails des surfaces.
+    \item \textbf{Impression 3D :} Création de surfaces à l'aide d'imprimantes 3D, telles que les modèles Formlabs et Elegoo.
+    \item \textbf{Plan de Test :} Conception de divers scénarios pour évaluer les interactions frictionnelles sur ces surfaces fabriquées.
+\end{itemize}
+
+\section{Extraction et Analyse des Données}
+\begin{itemize}
+    \item Les données simulées sont analysées avec \textbf{Paraview}, un outil de visualisation performant permettant d'examiner les fichiers \texttt{.pvd}, \texttt{.vtm} et \texttt{.vtu}.
+    \item À l'aide de scripts Python, nous extrayons les données suivantes :
+    \begin{itemize}
+        \item Forces de contact.
+        \item Contraintes de Cauchy.
+        \item Tenseurs de Piola (ordre 1 et 2).
+        \item Contraintes de Von Mises.
+    \end{itemize}
+    \item Ces informations sont utilisées pour calculer le coefficient de frottement en relation avec les forces de contact et les contraintes. Python facilite une manipulation rapide et précise des données, assurant ainsi des résultats fiables.
+\end{itemize}
+
+\section{Génération de Scénarios Multi-Échelle}
+Pour étudier les comportements de frottement à différentes échelles, nous avons créé des scénarios adaptés aux échelles macroscopique et microscopique.
+
+\subsection{Échelle Macroscopique}
+À l'échelle macroscopique, les scénarios simulent des interactions visibles à l'œil nu, comme le frottement entre de grandes surfaces métalliques ou des semelles de chaussures.
+\begin{itemize}
+    \item \textbf{Paramètres de Simulation :}
+    \begin{itemize}
+        \item \textbf{Dimensions :} Objets de grandes tailles (ex. : 10 cm x 10 cm).
+        \item \textbf{Force Normale :} Forces appliquées entre 10 N et 100 N.
+        \item \textbf{Rugosité :} Paramètre \textit{Ra} variant de 0,5 à 5 $\mu$m.
+        \item \textbf{Matériaux :} Métaux tels que l'acier et l'aluminium.
+    \end{itemize}
+    \item \textbf{Scénarios Simulés :}
+    \begin{itemize}
+        \item Frottement entre deux plaques métalliques avec différentes rugosités.
+        \item Glissement linéaire et rotationnel.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Échelle Microscopique}
+À l'échelle microscopique, les scénarios ciblent les interactions au niveau des asperités, dominées par les forces moléculaires.
+\begin{itemize}
+    \item \textbf{Paramètres de Simulation :}
+    \begin{itemize}
+        \item \textbf{Dimensions :} Objets de petites tailles (ex. : 1 mm x 1 mm).
+        \item \textbf{Force Normale :} Forces appliquées entre 1 N et 10 N.
+        \item \textbf{Rugosité :} Paramètre \textit{Ra} variant de 0,05 à 0,5 $\mu$m.
+        \item \textbf{Matériaux :} Matériaux souples comme le caoutchouc et les polymères.
+    \end{itemize}
+    \item \textbf{Scénarios Simulés :}
+    \begin{itemize}
+        \item Frottement entre surfaces polies avec des rugosités fines.
+        \item Glissement alternant entre adhérence et glissement (Stick-Slip).
+    \end{itemize}
+\end{itemize}
+
+\subsection{Adaptation des Paramètres de Simulation}
+Pour chaque échelle, les paramètres sont ajustés pour refléter les conditions réelles :
+\begin{itemize}
+    \item \textbf{Dimensionnalité :} Utilisation d'unités appropriées (cm pour macroscopique, mm pour microscopique) et ajustement des échelles de temps.
+    \item \textbf{Propriétés des Matériaux :} Modules de Young, coefficients de Poisson et coefficients de frottement adaptés à chaque matériau et échelle.
+    \item \textbf{Conditions de Contact :} Paramétrage des contraintes initiales et des conditions limites spécifiques à chaque échelle.
+\end{itemize}
+
+\section{Réalisation des Tests Expérimentaux à Différentes Échelles}
+Pour valider les simulations, nous avons réalisé des tests réels correspondant aux scénarios simulés.
+
+\subsection{Tests à l'Échelle Macroscopique}
+\begin{itemize}
+    \item \textbf{Matériel :} Plaques métalliques d'acier et d'aluminium avec des rugosités \textit{Ra} contrôlées.
+    \item \textbf{Appareillage :} Tribomètre pour mesurer les forces de frottement statique et cinétique.
+    \item \textbf{Procédure :}
+    \begin{enumerate}
+        \item Préparation des surfaces métalliques avec les rugosités souhaitées.
+        \item Fixation des plaques sur le tribomètre.
+        \item Application progressive de la force normale.
+        \item Mesure des forces de frottement lors du glissement.
+    \end{enumerate}
+    \item \textbf{Échelle de Mesure :} Forces entre 10 N et 100 N.
+\end{itemize}
+
+\subsection{Tests à l'Échelle Microscopique}
+\begin{itemize}
+    \item \textbf{Matériel :} Échantillons de caoutchouc et de polymères imprimés en 3D avec des rugosités fines.
+    \item \textbf{Appareillage :} Microscope à Force Atomique (AFM) pour mesurer les forces de frottement au niveau des asperités.
+    \item \textbf{Procédure :}
+    \begin{enumerate}
+        \item Création des échantillons via impression 3D avec des rugosités contrôlées.
+        \item Utilisation de l'AFM pour mesurer le frottement en fonction de la vitesse de glissement.
+        \item Enregistrement des forces de contact et des transitions Stick-Slip.
+    \end{enumerate}
+    \item \textbf{Échelle de Mesure :} Forces entre 1 N et 10 N.
+\end{itemize}
+
+\subsection{Uniformisation des Tests}
+Pour assurer la comparabilité entre simulations et tests réels, les conditions expérimentales ont été calibrées :
+\begin{itemize}
+    \item \textbf{Rugosité :} Mesure précise des rugosités des échantillons réels et ajustement dans les simulations.
+    \item \textbf{Forces Appliquées :} Ajustement des forces normales et des vitesses de glissement dans les simulations pour correspondre aux tests.
+    \item \textbf{Matériaux :} Alignement des propriétés mécaniques des matériaux simulés avec ceux des échantillons réels.
+\end{itemize}
+
+\section{Optimisation et Calibration des Simulations}
+Pour que les simulations reflètent fidèlement les phénomènes réels de frottement, nous avons procédé à plusieurs étapes d'optimisation et de calibration.
+
+\subsection{Calibration des Paramètres}
+Les paramètres de simulation, tels que les coefficients de frottement et les modules de Young, ont été ajustés en fonction des données expérimentales.
+\begin{itemize}
+    \item \textbf{Méthode d'Optimisation :} Utilisation de techniques d'optimisation non linéaire pour minimiser l'écart entre les résultats simulés et expérimentaux.
+    \item \textbf{Validation Croisée :} Division des données expérimentales en ensembles d'entraînement et de validation pour éviter le surajustement des paramètres.
+\end{itemize}
+
+\subsection{Validation Multi-Échelle}
+La validation a été réalisée à la fois à l'échelle macroscopique et microscopique pour garantir la robustesse et la fiabilité des modèles.
+\begin{itemize}
+    \item \textbf{Macroscopique :} Comparaison des coefficients de frottement simulés avec
+
+ ceux mesurés via le tribomètre.
+    \item \textbf{Microscopique :} Analyse des forces de contact et des transitions Stick-Slip avec les données de l'AFM.
+\end{itemize}
+
+\section{Réseau de Validation et Analyse des Résultats}
+Après les simulations et les tests expérimentaux, les résultats ont été analysés pour évaluer la précision et la fiabilité des modèles.
+
+\subsection{Comparaison des Coefficients de Frottement}
+Les coefficients de frottement issus des simulations ont été comparés à ceux mesurés expérimentalement.
+\begin{itemize}
+    \item \textbf{Écart Absolu et Relatif :} Calcul de l'écart absolu ($| \mu_{\text{sim}} - \mu_{\text{exp}} |$) et relatif ($\frac{| \mu_{\text{sim}} - \mu_{\text{exp}} |}{\mu_{\text{exp}}}$) pour chaque scénario.
+    \item \textbf{Analyse Statistique :} Utilisation de métriques telles que la moyenne, la variance et le coefficient de corrélation pour évaluer la performance globale des simulations.
+\end{itemize}
+
+\subsection{Analyse des Contraintes et des Forces de Contact}
+Les contraintes de Cauchy, les tenseurs de Piola et les contraintes de Von Mises ont été examinés pour comprendre les distributions de contraintes sur les surfaces de contact.
+\begin{itemize}
+    \item \textbf{Visualisation :} Utilisation de Paraview pour visualiser les distributions de contraintes et identifier les zones de forte concentration.
+    \item \textbf{Corrélation avec le Frottement :} Analyse de la relation entre les contraintes locales et les forces de frottement mesurées.
+\end{itemize}
+
+\subsection{Identification des Tendances et des Anomalies}
+Des tendances générales ont été observées en fonction des paramètres simulés, et les anomalies ont été étudiées pour comprendre les écarts entre simulations et réalité.
+\begin{itemize}
+    \item \textbf{Tendances Générales :} Observation des comportements de frottement en fonction de la rugosité, des matériaux et des conditions de charge.
+    \item \textbf{Anomalies :} Analyse des écarts significatifs et identification des causes possibles, telles que des erreurs de modélisation ou des imprécisions dans les mesures expérimentales.
+\end{itemize}
+
+\section{Réseau de Validation}
+Pour renforcer la validité des résultats, un réseau de validation croisée a été mis en place, incluant différentes échelles et types de matériaux.
+\begin{itemize}
+    \item \textbf{Validation Inter-Échelle :} Vérification de la cohérence des modèles à la fois à l'échelle macroscopique et microscopique.
+    \item \textbf{Validation Multi-Matériaux :} Assurance que les modèles restent précis pour différents types de matériaux et de rugosités.
+\end{itemize}

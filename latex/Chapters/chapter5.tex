@@ -1,0 +1,110 @@
+\chapter{Résultats}
+
+\section{Résultats du simulateur de friction 3D}
+\lipsum[1]
+
+\section{Analyse de données réelles}
+\lipsum[1]
+
+\section*{Calcul de la normale à partir de 6 images – Application sur le banc GelSight}
+
+Dans notre système GelSight, un capteur tactile optique de haute précision, nous utilisons une méthode simple pour reconstruire la carte des normales d'une surface. Le banc GelSight capture 6 images de la même surface, chacune éclairée par une source de lumière positionnée différemment. Pour chaque pixel de l'image, la valeur d'intensité représente la quantité de lumière réfléchie. Ces 6 intensités, notées \( I_1, I_2, \dots, I_6 \), nous aident à déduire la direction de la normale de la surface à cet endroit.
+
+\vspace{0.5em}
+\textbf{Étape 1 : Définition des directions lumineuses}\\
+Chaque image est prise sous un angle \(\theta_i\) connu. Pour simplifier, on représente la direction de la lumière sous forme d'un vecteur :
+\[
+\mathbf{L}_i = \begin{pmatrix} \cos\theta_i \\ \sin\theta_i \\ 1 \end{pmatrix}
+\]
+pour \( i = 1, \dots, 6 \).
+
+\vspace{0.5em}
+\textbf{Étape 2 : Modélisation du problème}\\
+La lumière réfléchie par la surface à chaque pixel dépend du produit scalaire entre la normale de la surface 
+\[
+\mathbf{N} = \begin{pmatrix} N_x \\ N_y \\ N_z \end{pmatrix}
+\]
+et la direction de la lumière \(\mathbf{L}_i\). Ainsi, on a pour chaque image :
+\[
+I_i = \mathbf{N} \cdot \mathbf{L}_i \quad \text{pour } i=1,\dots,6.
+\]
+En regroupant ces 6 équations, on peut écrire :
+\[
+\begin{pmatrix}
+I_1 \\ I_2 \\ \vdots \\ I_6
+\end{pmatrix}
+=
+\begin{pmatrix}
+\cos\theta_1 & \sin\theta_1 & 1\\[1mm]
+\cos\theta_2 & \sin\theta_2 & 1\\[1mm]
+\vdots & \vdots & \vdots\\[1mm]
+\cos\theta_6 & \sin\theta_6 & 1
+\end{pmatrix}
+\begin{pmatrix}
+N_x \\ N_y \\ N_z
+\end{pmatrix}.
+\]
+On note cela succinctement :
+\[
+I = L\, \mathbf{N}.
+\]
+
+\vspace{0.5em}
+\textbf{Étape 3 : Calcul de la normale}\\
+Pour déterminer la normale \(\mathbf{N}\), on résout le système par la méthode de la pseudo-inverse. On calcule l'inverse généralisée de \(L\) :
+\[
+L^+ = (L^\top L)^{-1} L^\top,
+\]
+ce qui nous permet d'obtenir :
+\[
+\mathbf{N} = L^+ \, I.
+\]
+Ensuite, on normalise la normale pour obtenir une vecteur unitaire :
+\[
+\mathbf{N}_{\text{normalisée}} = \frac{\mathbf{N}}{\|\mathbf{N}\|}.
+\]
+
+\vspace{0.5em}
+\textbf{Exemple de code en Python}
+
+\begin{lstlisting}
+import numpy as np
+
+# Les 6 angles (en degrés) des sources de lumière
+angles_deg = [330, 30, 90, 120, 180, 270]
+
+# Conversion en radians
+angles = np.radians(angles_deg)
+
+# Construction de la matrice des directions lumineuses
+L = np.array([[np.cos(a), np.sin(a), 1.0] for a in angles])
+
+# Pour un pixel, supposons que nous avons les intensités mesurées suivantes :
+I = np.array([I1, I2, I3, I4, I5, I6])  # Remplacez I1, I2, ..., I6 par les valeurs mesurées
+
+# Calcul de la pseudo-inverse de L
+L_pinv = np.linalg.pinv(L)
+
+# Calcul de la normale
+N = L_pinv @ I
+
+# Normalisation de la normale
+N_normalized = N / np.linalg.norm(N)
+
+print("La normale (unitaire) au pixel est :", N_normalized)
+\end{lstlisting}
+
+\vspace{0.5em}
+\textbf{Résumé pour le banc GelSight :}
+\begin{enumerate}
+  \item \textbf{Acquisition des images :} Le banc GelSight prend 6 images d'une surface avec des éclairages différents.
+  \item \textbf{Mesure de l'intensité :} Chaque image fournit la luminosité \(I_i\) à chaque pixel.
+  \item \textbf{Modélisation :} On considère que \(I_i\) est proportionnel au produit scalaire entre la normale \(\mathbf{N}\) et la direction de lumière \(\mathbf{L}_i\).
+  \item \textbf{Résolution :} En regroupant les 6 équations, on obtient \( I = L\, \mathbf{N} \). On résout ce système avec la pseudo-inverse pour obtenir \(\mathbf{N}\).
+  \item \textbf{Normalisation :} Enfin, on normalise \(\mathbf{N}\) pour obtenir une normale unitaire.
+\end{enumerate}
+
+Cette méthode simple nous permet de reconstruire la \emph{normal map} de la surface mesurée par le système GelSight.
+
+\section{Analyse de surface imprimée en 3D}
+\lipsum[1]

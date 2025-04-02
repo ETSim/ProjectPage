@@ -1,0 +1,684 @@
+\chapter{Impl\'ementation}
+
+\section{Génération de Surfaces}
+Les surfaces de contact sont générées en combinant deux approches principales :
+\begin{itemize}
+    \item \textbf{Fonctions de Bruit :} Utilisation de fonctions stochastiques pour créer des rugosités aléatoires et auto-similaires.
+    \item \textbf{Scans Réels :} Acquisition de surfaces réelles grâce à des scanners 3D pour des tests expérimentaux.
+\end{itemize}
+
+\subsection{Fonctions de Bruit}
+Les fonctions de bruit permettent de simuler des surfaces rugueuses en générant des variations aléatoires et auto-similaires. Plusieurs types de bruit sont utilisés en fonction des caractéristiques souhaitées pour la surface.
+
+\section{Tableau des Modèles de Bruit}
+
+\begin{longtable}{|p{4cm}|p{7cm}|p{5cm}|}
+    \hline
+    \textbf{Type de Bruit} & \textbf{Description} & \textbf{Formule ou Algorithme} \\ \hline
+    \endfirsthead
+    \hline
+    \textbf{Type de Bruit} & \textbf{Description} & \textbf{Formule ou Algorithme} \\ \hline
+    \endhead
+    \hline
+    \endfoot
+    Perlin & Génère un bruit pseudo-aléatoire basé sur la méthode de Perlin, utile pour des textures naturelles. & $pnoise2(x, y)$ \\ \hline
+    White & Bruit blanc pur avec une distribution uniforme. & $B(x, y) = \text{rand}(x, y)$ \\ \hline
+    Blue & Bruit blanc filtré avec un filtre gaussien pour réduire les hautes fréquences. & $B_{\text{blue}} = B_{\text{white}} - \text{lowpass}(B_{\text{white}})$ \\ \hline
+    FBM (Fractal Brownian Motion) & Superpose plusieurs couches de bruit avec des amplitudes et fréquences décroissantes. & $\sum_{n=0}^N A_n \cdot pnoise2(k_n x, k_n y)$ \\ \hline
+    Sine & Génère une grille de sinus en 2D pour produire des oscillations régulières. & $f(x, y) = \sin(x) + \sin(y)$ \\ \hline
+    Square & Ondes carrées générées par une fonction périodique carrée. & $f(x) = \text{square}(\sin(x))$ \\ \hline
+    Sawtooth & Ondes triangulaires générées par des oscillations périodiques. & $f(x) = \text{sawtooth}(x)$ \\ \hline
+    Wood & Génère des anneaux concentriques similaires aux cernes d'un arbre. & $f(x, y) = \sin(10 \cdot r)$ avec $r = \sqrt{x^2 + y^2}$ \\ \hline
+    Brushed Aluminium & Simule des surfaces métalliques texturées à l'aide d'un lissage directionnel. & Filtrage gaussien appliqué sur un bruit blanc. \\ \hline
+    PVC & Simule une texture aléatoire avec des lignes artificielles imitant le plastique PVC. & Filtrage gaussien avec soustraction locale. \\ \hline
+    Cement & Simule des surfaces rugueuses typiques du béton ou du ciment. & $B_{\text{cement}} = \text{lowpass}(B_{\text{white}})$ \\ \hline
+    Honeycomb & Génère une grille hexagonale en combinant sinus et cosinus. & $f(x, y) = (\sin(x) \cdot \cos(y))^2$ \\ \hline
+    Grid & Génère un réseau de lignes verticales et horizontales. & $f(x, y) = (\mod(x, l) < w) \cup (\mod(y, l) < w)$ \\ \hline
+    Triangles & Produit une texture triangulaire à partir de sinus combinés. & $f(x, y) = |\sin(x) - \sin(y)|$ \\ \hline
+    Gyroid & Génère une structure 3D avec des oscillations périodiques. & $f(x, y) = \sin(x) \cdot \cos(y) + \sin(y)$ \\ \hline
+    Octet & Simule une structure basée sur des cellules cubiques régulières. & $f(x, y) = |\sin(x)| + |\sin(y)|$ \\ \hline
+    Concentric & Crée des anneaux concentriques à partir de distances radiales. & $f(x, y) = \sin(r)$ avec $r = \sqrt{x^2 + y^2}$ \\ \hline
+\end{longtable}
+
+\noindent Ce tableau récapitule les modèles de bruit disponibles, leurs descriptions, ainsi que les formules ou algorithmes associés.
+
+
+\section{Scans de surface}
+En suivant ce processus de collecte de données de scan de surface à l’aide du scanner \textbf{GelSight}, nous sommes en mesure de capturer des cartes altimétriques 3D détaillées des surfaces étudiées, fournissant des informations précieuses sur leur topographie et leur texture.
+
+\subsection{Matériel du scan}
+Pour obtenir des informations détaillées sur les surfaces, nous utilisons un \textbf{scanner GelSight Benchtop}, qui est un équipement de mesure optique conçu pour capturer la géométrie de diverses surfaces. Ce scanner utilise un gel exclusif permettant de capturer des structures de surface au niveau du micron, indépendamment des conditions d’éclairage ou de la réflectivité du matériau.
+
+Les données capturées sont ensuite traitées par le logiciel \textbf{GelSight} pour générer des images 3D et des cartes altimétriques. Notre système comprend un appareil photo \textbf{Canon T3i} associé à un objectif macro \textbf{MP-E 65mm 1X - 5X}, réglé sur un grossissement de \textbf{3X} pour tous nos scans de surface.
+
+\begin{figure}[h]
+    \centering
+    \subfloat[L’installation pour scanner des surfaces.]{
+        \includegraphics[width=0.45\textwidth]{scan_setup.png}
+    }
+    \hfill
+    \subfloat[Carte altimétrique de l’aluminium brossé.]{
+        \includegraphics[width=0.45\textwidth]{heightmap.png}
+    }
+    \caption{Processus de numérisation d'une surface en aluminium brossé poli.}
+    \label{fig:scan_process}
+\end{figure}
+
+Pour améliorer les propriétés de réflexion et la fidélité de la surface scannée, nous utilisons une couche de gel pressée sur le matériau à l’aide d’une vitre transparente. Cette technique permet au gel de se conformer à la surface et de refléter sa texture avec précision.
+
+\subsection{Calibrage du scanner}
+Avant chaque séance de capture, une étape essentielle consiste à nettoyer minutieusement toutes les surfaces à analyser. Nous utilisons de l’\textbf{alcool isopropylique} et des \textbf{lingettes jetables non pelucheuses} pour garantir une surface propre et éviter toute contamination qui pourrait interférer avec la capture.
+
+Ensuite, nous procédons à un calibrage en utilisant une surface de référence comportant des sections circulaires de diamètres connus. Ce calibrage permet au logiciel du scanner de réaliser une mise à l’échelle précise et d’assurer une cohérence entre les différentes captures.
+
+\subsection{Scans des surfaces}
+Chaque surface est scannée sous \textbf{six conditions d’éclairage différentes}, avec six lumières disposées autour de la zone de capture. La combinaison de ces images permet de générer une carte 3D en exploitant les variations de lumière et d’ombre.
+
+Pour chaque matériau, \textbf{quatre scans} sont réalisés afin de mieux représenter la texture moyenne de la surface. Les données acquises sont ensuite traitées pour générer une \textbf{carte altimétrique 3D}.
+
+\subsection{Génération des cartes altimétriques}
+Les cartes altimétriques sont générées grâce à une technique appelée \textbf{stéréophotométrie}, qui extrait les informations tridimensionnelles à partir d’images prises sous divers angles d’éclairage. Ce processus comprend plusieurs étapes :
+
+\begin{enumerate}
+    \item \textbf{Capture d’images :} Six images de la surface sont prises sous différents angles d’éclairage pour capturer les ombres et reflets.
+    \item \textbf{Estimation de la réflectance :} Analyse des propriétés optiques de la surface pour séparer les effets d’éclairage de la géométrie réelle.
+    \item \textbf{Calcul des vecteurs normaux :} À l’aide des images et de la réflectance estimée, les normales de surface sont calculées pour chaque pixel.
+    \item \textbf{Intégration et lissage :} Les informations des six images sont fusionnées et filtrées pour générer une carte altimétrique précise.
+    \item \textbf{Projection en carte de hauteur 2D :} Pour optimiser le stockage et le traitement, la carte altimétrique 3D est souvent convertie en une version 2D en niveaux de gris.
+\end{enumerate}
+
+\subsection{Prétraitement des cartes altimétriques}
+Avant l’analyse finale, un \textbf{prétraitement} est appliqué pour corriger les biais dus aux variations globales de hauteur :
+
+\begin{itemize}
+    \item \textbf{Déstationnarisation :} Suppression des tendances globales telles que l’inclinaison de la surface.
+    \item \textbf{Filtrage sigma :} Réduction du bruit à l’aide d’un filtre Gaussien avec un paramètre de \textbf{sigma = 50}.
+\end{itemize}
+
+Les valeurs des paramètres de prétraitement sont maintenues constantes pour garantir la comparabilité des scans. L’objectif est d’éliminer les macro-tendances tout en préservant les micro-détails importants pour l’étude de la friction.
+
+\subsection{Importance du prétraitement}
+Ces étapes garantissent que les données altimétriques restent exploitables sans introduire d’erreurs pouvant fausser l’analyse. Elles permettent :
+
+\begin{itemize}
+    \item \textbf{Une élimination des macro-tendances} telles que l’inclinaison ou les grandes variations de hauteur non pertinentes.
+    \item \textbf{Une préservation des micro-tendances}, essentielles pour comprendre les interactions tribologiques.
+    \item \textbf{Une cohérence entre les scans}, évitant toute variabilité artificielle due au prétraitement.
+\end{itemize}
+
+\noindent En assurant une qualité et une précision optimales, ce processus renforce la fiabilité des données obtenues pour les simulations et analyses tribologiques.
+
+
+
+\begin{table}[h]
+    \centering
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{|p{3cm}|p{8cm}|p{6cm}|}
+        \hline
+        \textbf{Type de Carte} & \textbf{Description} & \textbf{Nom du Fichier (Formats)} \\ \hline
+        Occlusion Ambiante & Simule les ombres dans les creux et les coins pour améliorer la profondeur et le réalisme. & (.jpg, .png, .tiff, .exr) \\ \hline
+        Couleur de Base & Définit la couleur principale d'une surface sans aucun effet d'éclairage ou d'ombrage. &  (.jpg, .png, .tiff, .exr) \\ \hline
+        Déplacement & Définit les informations de hauteur de surface en niveaux de gris. Gris moyen = plat, blanc = sommet, noir = creux. &  (.tiff, .exr) \\ \hline
+        Métallique & Définit la nature métallique d'un matériau, distinguant les surfaces métalliques des surfaces non métalliques. &  (.jpg, .png, .tiff, .exr) \\ \hline
+        Normale & Simule les informations de relief en modifiant les normales de la surface pour créer l'illusion de bosses. &  (.jpg, .png, .tiff, .exr) \\ \hline
+        ORM & Contient les informations d'Occlusion Ambiante, de Rugosité et de Métal dans les canaux R, G et B. Principalement utilisé pour le rendu en temps réel. &  (.jpg, .png, .tiff, .exr) \\ \hline
+        Rugosité & Détermine la netteté des réflexions, avec des valeurs plus sombres produisant des reflets plus nets et plus clairs. & (.jpg, .png, .tiff, .exr) \\ \hline
+    \end{tabular}
+    \caption{Cartes de textures et leurs descriptions}
+    \label{tab:cartes_textures}
+\end{table}
+
+
+
+\section{ISO 25178-3 Parameters for Surface Roughness}
+
+Les paramètres de rugosité de surface selon la norme ISO 25178-3 fournissent des descripteurs normalisés permettant d’analyser et de caractériser les surfaces en termes de propriétés tribologiques et fonctionnelles.
+
+\subsection{Table des Paramètres ISO 25178-3}
+
+\begin{longtable}{|p{3.5cm}|p{1.5cm}|p{6cm}|p{6cm}|}
+    \hline
+    \textbf{Paramètre} & \textbf{Symbole} & \textbf{Formule} & \textbf{Description} \\ \hline
+    \endfirsthead
+    \hline
+    \textbf{Paramètre} & \textbf{Symbole} & \textbf{Formule} & \textbf{Description} \\ \hline
+    \endhead
+    \hline
+    \endfoot
+    \textbf{Paramètres de Hauteur (Height Parameters)} & & & \\ \hline
+    Rugosité moyenne arithmétique & $S_a$ & $S_a = \frac{1}{A} \int_A |z(x, y)| \, dA$ & Moyenne des écarts absolus par rapport au plan moyen. \\ \hline
+    Rugosité quadratique moyenne & $S_q$ & $S_q = \sqrt{\frac{1}{A} \int_A z(x, y)^2 \, dA}$ & Évalue l’importance des écarts grâce à une mesure quadratique. \\ \hline
+    Hauteur maximale & $S_z$ & $S_z = S_p + S_v$ & Somme de la hauteur du pic maximal et de la profondeur de la vallée maximale. \\ \hline
+    Skewness & $S_{sk}$ & $S_{sk} = \frac{1}{S_q^3 A} \int_A z(x, y)^3 \, dA$ & Asymétrie de la distribution des hauteurs. \\ \hline
+    Kurtosis & $S_{ku}$ & $S_{ku} = \frac{1}{S_q^4 A} \int_A z(x, y)^4 \, dA$ & Concentration des hauteurs autour du plan moyen. \\ \hline
+    Hauteur du pic maximal & $S_p$ & $S_p = \max(z(x, y))$ & Hauteur maximale mesurée depuis le plan moyen. \\ \hline
+    Profondeur de la vallée maximale & $S_v$ & $S_v = |\min(z(x, y))|$ & Profondeur maximale mesurée depuis le plan moyen. \\ \hline
+
+    \textbf{Paramètres Spatiaux (Spatial Parameters)} & & & \\ \hline
+    Longueur d’autocorrélation & $S_{al}$ & $S_{al} = \min(\tau)$, avec $\tau$ le décalage où l’autocorrélation chute sous 0.2. & Distance au-delà de laquelle les valeurs de hauteur deviennent non corrélées. \\ \hline
+    Rapport d’aspect de texture & $S_{tr}$ & $S_{tr} = \frac{\text{corrélation minimale}}{\text{corrélation maximale}}$ & Mesure de l’isotropie de la texture de surface. \\ \hline
+    Direction de texture dominante & $S_{td}$ & Basée sur la transformée de Fourier. & Orientation dominante de la texture de surface. \\ \hline
+
+    \textbf{Paramètres Hybrides (Hybrid Parameters)} & & & \\ \hline
+    Gradient quadratique moyen & $S_{dq}$ & $S_{dq} = \sqrt{\frac{1}{A} \int_A \left( \left( \frac{\partial z}{\partial x} \right)^2 + \left( \frac{\partial z}{\partial y} \right)^2 \right) dA}$ & Évalue les pentes de la surface. \\ \hline
+    Rapport de surface développée & $S_{dr}$ & $S_{dr} = \frac{A_{\text{réelle}} - A_{\text{projetée}}}{A_{\text{projetée}}} \times 100$ & Pourcentage d’augmentation de la surface réelle par rapport à la surface projetée. \\ \hline
+
+    \textbf{Paramètres Fonctionnels (Functional Parameters)} & & & \\ \hline
+    Rapport matériel aréolaire & $S_{mr(c)}$ & Dépend de la courbe de portion matérielle. & Proportion de matériau au-dessus d’un plan de référence. \\ \hline
+    Inverse du rapport matériel & $S_{mc(mr)}$ & Dépend de la courbe inverse. & Hauteur à un ratio matériel donné. \\ \hline
+    Hauteur du cœur & $S_k$ & $S_k = S_z - S_{pk} - S_{vk}$ & Profondeur de la région centrale de la surface. \\ \hline
+    Hauteur réduite des pics & $S_{pk}$ & $S_{pk} = S_p - \text{hauteur moyenne du cœur}$ & Hauteur des pics au-dessus de la région centrale. \\ \hline
+    Hauteur réduite des vallées & $S_{vk}$ & $S_{vk} = \text{hauteur moyenne du cœur} - S_v$ & Profondeur des vallées sous la région centrale. \\ \hline
+
+    \textbf{Paramètres de Volume Fonctionnel (Functional Volume Parameters)} & & & \\ \hline
+    Volume des vides dans les vallées & $V_{vv}$ & $V_{vv} = \int_{S_v}^{S_{vk}} |z(x, y)| \, dA$ & Volume des vides sous la région centrale. \\ \hline
+    Volume des matériaux des pics & $V_{mp}$ & $V_{mp} = \int_{S_p}^{S_k} z(x, y) \, dA$ & Volume des matériaux dans la région des pics. \\ \hline
+    Volume des matériaux du cœur & $V_{mc}$ & $V_{mc} = \int_{S_k}^{S_v} z(x, y) \, dA$ & Volume des matériaux dans la région centrale. \\ \hline
+\end{longtable}
+
+% Add ISO reference here, if applicable.
+\noindent Les paramètres présentés suivent la norme \textbf{ISO 25178-3} pour la caractérisation des surfaces.
+
+
+
+
+\section{Discrétisation}
+
+La discrétisation est une étape cruciale dans la simulation des phénomènes de frottement et de déformation des surfaces. Elle consiste à diviser les volumes continus en éléments discrets plus petits, permettant ainsi de résoudre numériquement les équations différentielles qui régissent le comportement des matériaux en contact. Dans ce travail, nous utilisons des maillages tétraédriques générés à l'aide de la bibliothèque \textbf{Polyfem}. Cette approche facilite la résolution des équations différentielles liées au contact et à la déformation des surfaces avec une grande précision.
+
+\subsection{Tétraèdres et Maillages Tétraédriques}
+
+Un \textbf{tétraèdre} est une figure géométrique à quatre faces planes triangulaires, formant une structure de base en trois dimensions. Dans le contexte de la discrétisation, les tétraèdres sont utilisés comme éléments finis pour représenter des volumes complexes de manière simplifiée et flexible. Les maillages tétraédriques offrent plusieurs avantages :
+\begin{itemize}
+    \item \textbf{Flexibilité Géométrique :} Ils peuvent facilement s'adapter à des géométries complexes et irrégulières.
+    \item \textbf{Précision :} Permettent une approximation précise des courbes et des surfaces grâce à une granularité fine.
+    \item \textbf{Efficacité Computationnelle :} Facilite le calcul parallèle et la résolution efficace des systèmes d'équations résultants.
+\end{itemize}
+
+\begin{table}[h]
+    \centering
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{|p{3cm}|p{5cm}|p{6cm}|}
+        \hline
+        \textbf{Outil} & \textbf{Description} & \textbf{Caractéristiques principales} \\ \hline
+        \textbf{TetGen} & Génération de maillages tétraédriques à partir de maillages de surface. & - Production de maillages conformes et de qualité. \\
+         & & - Adapté aux simulations FEM. \\
+         & & - Développé par Hang Si. \\ \hline
+        \textbf{TetWild} & Génération et optimisation de maillages tétraédriques adaptatifs. & - Gère des géométries complexes et irrégulières. \\
+         & & - Optimisation automatique pour minimiser la distorsion. \\
+         & & - Adapté aux simulations haute performance. \\ \hline
+        \textbf{Gmsh} & Générateur de maillages génériques pour diverses simulations numériques. & - Supporte les maillages tétraédriques, hexaédriques et hybrides. \\
+         & & - Interface graphique et API pour intégration. \\
+         & & - Outil très polyvalent, utilisé dans l'industrie et la recherche. \\ \hline
+        \textbf{MMG} & Outil spécialisé dans l'adaptation et l'optimisation des maillages. & - Raffinement et coarsening adaptatif de maillages existants. \\
+         & & - Amélioration de la qualité des maillages pour simulations FEM. \\
+         & & - Compatible avec Gmsh et autres outils. \\ \hline
+        \textbf{fTetWild} & Variante améliorée de TetWild pour des simulations plus robustes. & - Maillages optimisés pour la robustesse et la stabilité. \\
+         & & - Spécialement conçu pour des simulations physiques avancées. \\
+         & & - Gestion efficace des grandes géométries. \\ \hline
+    \end{tabular}
+    \caption{Comparaison des outils de génération de maillages tétraédriques}
+    \label{tab:maillage_tools}
+\end{table}
+
+
+
+\subsection{Polyfem}
+
+La bibliothèque \textbf{Polyfem} est utilisée pour la génération de maillages tétraédriques dans ce travail. Polyfem intègre des outils tels que Tetgen et Tetwild pour créer des maillages adaptés aux simulations numériques. Grâce à ses capacités avancées de génération de maillage, Polyfem permet de produire des maillages de haute qualité qui capturent fidèlement les géométries complexes des surfaces de contact étudiées.
+
+\subsection{Processus de Discrétisation}
+
+Le processus de discrétisation implique plusieurs étapes clés :
+\begin{enumerate}
+    \item \textbf{Définition de la Géométrie :} Modélisation précise des surfaces de contact à l'aide de logiciels de CAO ou de scans 3D.
+    \item \textbf{Génération du Maillage de Surface :} Création d'un maillage de surface précis qui servira de base pour la génération du maillage tétraédrique interne.
+    \item \textbf{Tetraédralisation :} Utilisation de Tetgen ou Tetwild via Polyfem pour générer le maillage tétraédrique interne, assurant la conformité et la qualité requises.
+    \item \textbf{Optimisation du Maillage :} Ajustement des paramètres de maillage pour équilibrer la précision et l'efficacité computationnelle, en fonction des besoins spécifiques de la simulation.
+    \item \textbf{Validation du Maillage :} Vérification de la qualité du maillage généré, en s'assurant qu'il répond aux critères de simulation et qu'il ne contient pas d'éléments défectueux.
+\end{enumerate}
+
+\subsection{Illustration des Fonctions de Maillage}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{maillage_exemple.png}
+    \caption{Exemple de maillage tétraédrique généré à l'aide de Tetgen et Tetwild. Les tétraèdres sont représentés en différentes couleurs pour illustrer la qualité et la régularité du maillage.}
+    \label{fig:maillage_exemple}
+\end{figure}
+
+\subsection{Avantages de la Discrétisation Tétraédrique}
+
+L'utilisation de maillages tétraédriques présente plusieurs avantages pour les simulations de frottement et de déformation :
+\begin{itemize}
+    \item \textbf{Précision :} Permet une représentation détaillée des géométries complexes et des variations fines des surfaces.
+    \item \textbf{Flexibilité :} Adaptable à diverses formes géométriques et capable de gérer des transitions de matériaux ou des interfaces complexes.
+    \item \textbf{Efficacité :} Optimisé pour les calculs parallèles et les simulations à grande échelle, réduisant le temps de calcul nécessaire.
+    \item \textbf{Compatibilité :} Compatible avec une large gamme de logiciels de simulation et de méthodes numériques, facilitant l'intégration dans des workflows de recherche et développement.
+\end{itemize}
+
+
+\section{Mat\'eriaux}
+Pour cette recherche, nous utilisons des mat\'eriaux vari\'es pour valider les simulations et les tests physiques. Les surfaces sont g\'en\'er\'ees \`a partir de scans de surfaces r\'eelles ainsi que des mod\`eles cr\'e\'es \`a l'aide de fonctions de bruit stochastiques.
+
+\section{Modèles de Corps Souples}
+Comme montré en Figure \ref{fig:soft_body}, une approche simple pour modéliser les systèmes de corps souples consiste à utiliser des masses discrètes reliées entre elles par des forces internes qui maintiennent la cohésion du système. Ces forces internes peuvent être modélisées par un système masse-ressort ou par des modèles élastiques aux éléments finis. L’équation du mouvement pour un système de corps souples est donnée par :
+
+\begin{equation}
+M \ddot{x} + (\alpha M + \beta K(x)) \dot{x} + f_{int}(x) = f_{ext}. \label{eq:soft_body}
+\end{equation}
+
+Dans cette équation, \( x \in \mathbb{R}^{3n} \) représente la position des particules du système, \( M \) est la matrice de masse diagonale, et \( K(x) \) est la matrice de raideur, qui dépend généralement de la configuration des particules. Les paramètres \( \alpha \) et \( \beta \) sont les coefficients d’amortissement de Rayleigh, et \( f_{int} \) est le vecteur des forces internes. La force externe \( f_{ext} \) inclut des forces telles que la gravité ou les forces de collision.
+
+\subsection{Modèles d'Élasticité dans Polyfem}
+
+Polyfem supporte plusieurs modèles d’élasticité pour simuler le comportement des corps souples. Les principaux modèles utilisés sont :
+
+\subsubsection{Modèle Élastique Linéaire}
+
+Le modèle élastique linéaire est le plus simple des modèles d’élasticité, basé sur les lois de Hooke généralisées en trois dimensions. Ce modèle est approprié pour les matériaux qui se comportent de manière linéaire sous de petites déformations. La relation entre les contraintes \( \sigma \) et les déformations \( \epsilon \) est donnée par :
+
+\[
+\sigma = \lambda \, \text{tr}(\epsilon) I + 2\mu \epsilon
+\]
+
+où \( \lambda \) et \( \mu \) sont les coefficients de Lame, \( \text{tr}(\epsilon) \) est la trace du tenseur de déformation, et \( I \) est le tenseur identité. Ce modèle suppose que les matériaux retrouvent leur forme initiale après l’élimination des charges appliquées.
+
+\subsubsection{Modèle Hyperélastique de Lame}
+
+Le modèle hyperélastique de Lame étend le modèle élastique linéaire en permettant des comportements non linéaires des matériaux sous grandes déformations. Il est basé sur une fonction de potentiel \( \Psi \) qui dépend des invariants du tenseur de déformation \( \epsilon \). La fonction de potentiel pour ce modèle peut être exprimée comme :
+
+\[
+\Psi = \frac{\lambda}{2} \left( \text{tr}(C) - 3 \right) + \mu \left( \text{tr}(C) - 3 \right)
+\]
+
+où \( C = F^T F \) est le tenseur de déformation droite, et \( F \) est le tenseur de déformation. Ce modèle permet de capturer les effets de non-linéarité dans la réponse du matériau à des déformations importantes, offrant une meilleure représentation des matériaux réalistes comme les polymères ou les tissus biologiques.
+
+\subsubsection{Modèle Neo-Hookean}
+
+Le modèle Neo-Hookean est un type spécifique de modèle hyperélastique qui est particulièrement adapté pour les matériaux en caoutchouc et les tissus biologiques. La fonction de potentiel pour le modèle Neo-Hookean est définie par :
+
+\[
+\Psi = \frac{\mu}{2} \left( \text{tr}(C) - 3 \right) - \mu \ln J + \frac{\lambda}{2} (\ln J)^2
+\]
+
+où \( J = \det(F) \). Ce modèle inclut des termes non linéaires qui permettent de simuler des matériaux qui subissent de grandes déformations tout en maintenant une réponse élastique réaliste. Le terme \( -\mu \ln J \) introduit une dépendance logarithmique à la dilatation, tandis que le terme \( \frac{\lambda}{2} (\ln J)^2 \) contrôle la compressibilité du matériau.
+
+\subsection{Implémentation dans Polyfem}
+
+Polyfem permet d'utiliser ces modèles d'élasticité en définissant les paramètres matériels appropriés dans les fichiers de configuration de simulation. Par exemple :
+
+\begin{itemize}
+    \item \textbf{Élastique Linéaire :} Spécifier les coefficients de Lame \( \lambda \) et \( \mu \) dans les paramètres du matériau.
+    \item \textbf{Hyperélastique de Lame :} Utiliser une fonction de potentiel adaptée et fournir les paramètres \( \lambda \) et \( \mu \) pour gérer les grandes déformations.
+    \item \textbf{Neo-Hookean :} Définir les paramètres \( \mu \) et \( \lambda \) ainsi que les termes de déformation non linéaires dans la fonction de potentiel.
+\end{itemize}
+
+Ces modèles sont résolus à l’aide des solveurs intégrés de Polyfem, qui utilisent des méthodes d’éléments finis pour approximer les équations différentielles résultantes de chaque modèle d’élasticité. La flexibilité de Polyfem dans la gestion de différents modèles d’élasticité permet de simuler une large gamme de matériaux et de comportements mécaniques, facilitant ainsi l’étude des phénomènes de frottement et de déformation dans des systèmes de corps souples.
+
+\subsection{Comparaison des Modèles}
+
+\begin{itemize}
+    \item \textbf{Élastique Linéaire :} Simple et efficace pour les petites déformations, mais limité pour les grandes déformations et les matériaux non linéaires.
+    \item \textbf{Hyperélastique de Lame :} Offre une meilleure précision pour les grandes déformations et les matériaux non linéaires, mais nécessite une calibration plus complexe des paramètres.
+    \item \textbf{Neo-Hookean :} Approprié pour les matériaux qui subissent de grandes déformations élastiques, avec une formulation mathématique plus complexe mais offrant une meilleure correspondance avec les comportements réels des matériaux en caoutchouc et biologiques.
+\end{itemize}
+
+\subsection{Illustration des Modèles}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{models_comparison.png}
+    \caption{Comparaison des réponses mécaniques des différents modèles d'élasticité : Élastique linéaire, Hyperélastique de Lame, et Neo-Hookean.}
+    \label{fig:models_comparison}
+\end{figure}
+
+\section{Cadre de Simulation}
+
+Le cadre de simulation repose sur les méthodes suivantes :
+\begin{itemize}
+    \item \textbf{Contact Potentiel Incrémental (IPC) :} Une méthode non-linéaire qui utilise une optimisation incrémentale pour gérer les interactions multiples entre objets déformables.
+    \item \textbf{Détection de Collision Continue (CCD) :} Une approche garantissant la résolution des collisions en temps réel pour des corps en mouvement rapide.
+    \item \textbf{Bibliothèque Polyfem :} Utilisée pour résoudre les problèmes non-linéaires et linéaires liés à la simulation des corps souples.
+    \item \textbf{Paraview :} Extraction et visualisation des données simulées pour l'analyse des résultats.
+\end{itemize}
+
+\subsection{Contact Potentiel Incrémental (IPC)}
+
+Le \textbf{Contact Potentiel Incrémental (IPC)} est une méthode avancée de détection et de résolution des contacts entre objets déformables. Cette approche non-linéaire permet de gérer de multiples interactions simultanées en minimisant une fonction potentielle qui pénalise l'interpénétration des objets.
+
+\subsubsection{Fonction Potentielle}
+
+La méthode IPC définit une fonction potentielle \( \Phi \) qui quantifie l'interaction entre les surfaces des objets en contact. Cette fonction est conçue de manière à augmenter rapidement lorsque les objets s'interpénètrent, empêchant ainsi leur chevauchement.
+
+\[
+\Phi(\mathbf{x}) = \sum_{i,j} \phi_{ij}(\mathbf{x})
+\]
+
+où :
+\begin{itemize}
+    \item \( \mathbf{x} \) représente les variables de déformation des objets.
+    \item \( \phi_{ij} \) est le potentiel de contact entre les objets \( i \) et \( j \).
+\end{itemize}
+
+\subsubsection{Optimisation Incrémentale}
+
+À chaque pas de temps \( \Delta t \), l'IPC résout le problème d'optimisation suivant pour déterminer les déformations \( \mathbf{x} \) minimisant la fonction potentielle tout en respectant les contraintes mécaniques :
+
+\[
+\min_{\mathbf{x}} \Phi(\mathbf{x}) + \mathcal{R}(\mathbf{x})
+\]
+
+où \( \mathcal{R}(\mathbf{x}) \) représente les termes de régularisation ou les contraintes supplémentaires liées aux propriétés matérielles et aux conditions aux limites.
+
+\subsubsection{Algorithme}
+
+L'algorithme IPC suit généralement ces étapes :
+\begin{enumerate}
+    \item \textbf{Initialisation :} Définir les positions initiales des objets et les paramètres de la simulation.
+    \item \textbf{Détection de Contact :} Identifier les paires d'objets susceptibles d'entrer en contact.
+    \item \textbf{Construction de la Fonction Potentielle :} Calculer \( \Phi(\mathbf{x}) \) pour les interactions détectées.
+    \item \textbf{Résolution de l'Optimisation :} Utiliser des méthodes d'optimisation incrémentale pour minimiser \( \Phi(\mathbf{x}) \) sous les contraintes.
+    \item \textbf{Mise à Jour des Positions :} Appliquer les déformations \( \mathbf{x} \) calculées aux objets.
+    \item \textbf{Itération :} Répéter les étapes précédentes pour chaque pas de temps \( \Delta t \).
+\end{enumerate}
+
+\subsection{Détection de Collision Continue (CCD)}
+
+La \textbf{Détection de Collision Continue (CCD)} est une technique essentielle pour prévenir le phénomène de \textit{tunneling}, où des objets en mouvement rapide traversent d'autres objets sans collision détectée entre deux pas de simulation. La CCD assure que toutes les collisions sont détectées et résolues même à haute vitesse.
+
+\subsubsection{Modélisation Mathématique}
+
+Pour deux objets en mouvement, la CCD cherche à déterminer le premier instant \( t^* \in [0, \Delta t] \) où une collision se produit. Supposons que les trajectoires des objets soient définies par leurs positions au temps \( t \) :
+
+\[
+\mathbf{P}_A(t) = \mathbf{P}_{A0} + \mathbf{V}_A t
+\]
+\[
+\mathbf{P}_B(t) = \mathbf{P}_{B0} + \mathbf{V}_B t
+\]
+
+où :
+\begin{itemize}
+    \item \( \mathbf{P}_A(t) \) et \( \mathbf{P}_B(t) \) sont les positions des objets \( A \) et \( B \) à l'instant \( t \).
+    \item \( \mathbf{V}_A \) et \( \mathbf{V}_B \) sont les vitesses des objets \( A \) et \( B \).
+\end{itemize}
+
+La condition de collision est donnée par :
+
+\[
+\mathbf{P}_A(t^*) \cap \mathbf{P}_B(t^*) \neq \emptyset
+\]
+
+\subsubsection{Algorithme CCD}
+
+L'algorithme CCD suit généralement ces étapes :
+\begin{enumerate}
+    \item \textbf{Définition des Trajectoires :} Modéliser les trajectoires des objets sur l'intervalle de temps \( [0, \Delta t] \).
+    \item \textbf{Détection de Collision :} Résoudre l'équation \( \mathbf{P}_A(t) \cap \mathbf{P}_B(t) \neq \emptyset \) pour trouver \( t^* \).
+    \item \textbf{Résolution de la Collision :} Ajuster les positions et les vitesses des objets à l'instant \( t^* \) pour résoudre la collision.
+    \item \textbf{Mise à Jour des Trajectoires :} Appliquer les ajustements et continuer la simulation pour le reste de l'intervalle de temps.
+\end{enumerate}
+
+\subsubsection{Formules de Collision}
+
+Pour des objets simples, comme des sphères, la détection de collision peut être formulée analytiquement. Supposons deux sphères de rayons \( R_A \) et \( R_B \) avec des centres \( \mathbf{C}_A(t) \) et \( \mathbf{C}_B(t) \). La condition de collision est :
+
+\[
+\|\mathbf{C}_A(t^*) - \mathbf{C}_B(t^*)\| \leq R_A + R_B
+\]
+
+En substituant les trajectoires :
+
+\[
+\|\mathbf{P}_{A0} + \mathbf{V}_A t^* - (\mathbf{P}_{B0} + \mathbf{V}_B t^*)\| \leq R_A + R_B
+\]
+
+Cela mène à résoudre une équation quadratique en \( t^* \).
+
+\subsection{Bibliothèque Polyfem}
+
+La bibliothèque \textbf{Polyfem} est utilisée pour résoudre les problèmes non-linéaires et linéaires liés à la simulation des corps souples. Polyfem intègre des solveurs avancés capables de gérer la déformation, le contact et les interactions entre multiples corps. Elle supporte la génération de maillages tétraédriques de haute qualité et offre des outils pour l'analyse et la visualisation des résultats.
+
+\subsubsection{Solveurs Linéaires : Pardiso}
+
+\textbf{Pardiso} est un solveur linéaire direct hautement performant intégré dans Polyfem pour résoudre les systèmes d'équations linéaires issus des méthodes des éléments finis. Pardiso est particulièrement efficace pour les matrices creuses symétriques définies positives, couramment rencontrées dans les problèmes d'élasticité linéaire.
+
+\paragraph{Fonctionnement de Pardiso}
+
+Pardiso utilise une décomposition LU optimisée pour les matrices creuses, exploitant la structure de sparsité pour minimiser les opérations de calcul et la mémoire requise. Cette approche permet de résoudre rapidement de grands systèmes d'équations, même pour des maillages tétraédriques complexes.
+
+\[
+\mathbf{A} \mathbf{x} = \mathbf{b}
+\]
+
+où :
+\begin{itemize}
+    \item \( \mathbf{A} \) est la matrice de raideur résultant de la discrétisation des équations de l'élément fini.
+    \item \( \mathbf{x} \) est le vecteur des déplacements nodaux.
+    \item \( \mathbf{b} \) est le vecteur des forces appliquées.
+\end{itemize}
+
+\paragraph{Avantages de Pardiso dans Polyfem}
+\begin{itemize}
+    \item \textbf{Performance :} Capacité à résoudre rapidement de grands systèmes grâce à des algorithmes optimisés.
+    \item \textbf{Stabilité Numérique :} Décomposition LU robuste qui assure la précision des solutions même pour des matrices mal conditionnées.
+    \item \textbf{Scalabilité :} Efficace pour les simulations parallèles, permettant d'exploiter pleinement les architectures multi-cœurs et distribuées.
+\end{itemize}
+
+\subsubsection{Solveurs Non-Linéaires}
+
+Pour les problèmes non-linéaires, Polyfem utilise des méthodes itératives avancées qui permettent de capturer les comportements complexes des matériaux sous de grandes déformations ou lors de contacts multiples.
+
+\paragraph{Méthode de Newton-Raphson}
+
+La méthode de Newton-Raphson est la technique principale utilisée pour résoudre les systèmes d'équations non-linéaires dans Polyfem. Cette méthode itère sur une approximation initiale pour converger vers la solution exacte en minimisant la fonction résiduelle.
+
+\[
+\mathbf{F}(\mathbf{x}) = 0
+\]
+
+où :
+\begin{itemize}
+    \item \( \mathbf{F}(\mathbf{x}) \) représente le vecteur des forces internes et externes.
+    \item \( \mathbf{x} \) est le vecteur des variables de déformation.
+\end{itemize}
+
+\[
+\mathbf{x}^{(k+1)} = \mathbf{x}^{(k)} - \left( \frac{\partial \mathbf{F}}{\partial \mathbf{x}} \right)^{-1} \mathbf{F}(\mathbf{x}^{(k)})
+\]
+
+\paragraph{Avantages de la Méthode de Newton-Raphson}
+\begin{itemize}
+    \item \textbf{Rapidité de Convergence :} Convergence quadratique sous des conditions adéquates, ce qui permet d'atteindre rapidement une solution précise.
+    \item \textbf{Flexibilité :} Applicable à une large gamme de problèmes non-linéaires, y compris ceux impliquant des matériaux hyperélastiques.
+\end{itemize}
+
+\paragraph{Limitations}
+\begin{itemize}
+    \item \textbf{Sensibilité à l'Initialisation :} Nécessite une approximation initiale proche de la solution pour assurer la convergence.
+    \item \textbf{Coût Computationnel :} Chaque itération implique la résolution d'un système linéaire, ce qui peut être coûteux pour de très grands systèmes.
+\end{itemize}
+
+\subsubsection{Recherche de Ligne (Line Search)}
+
+La recherche de ligne est une technique utilisée en conjonction avec la méthode de Newton-Raphson pour améliorer la robustesse et la convergence des solveurs non-linéaires. Elle consiste à déterminer un facteur d'étape optimal \( \alpha \) qui minimise la fonction résiduelle le long de la direction de mise à jour.
+
+\[
+\mathbf{x}^{(k+1)} = \mathbf{x}^{(k)} + \alpha \Delta \mathbf{x}^{(k)}
+\]
+
+où \( \Delta \mathbf{x}^{(k)} \) est la direction de mise à jour calculée par Newton-Raphson.
+
+\paragraph{Fonctionnement de la Recherche de Ligne}
+\begin{enumerate}
+    \item \textbf{Définition de la Direction :} Calculer la direction de mise à jour \( \Delta \mathbf{x}^{(k)} \) à partir de la méthode de Newton-Raphson.
+    \item \textbf{Optimisation de l'Étape :} Trouver le facteur \( \alpha \) qui minimise la norme de \( \mathbf{F}(\mathbf{x}^{(k)} + \alpha \Delta \mathbf{x}^{(k)}) \).
+    \item \textbf{Mise à Jour :} Appliquer la mise à jour avec le facteur \( \alpha \) optimal.
+\end{enumerate}
+
+\paragraph{Avantages de la Recherche de Ligne}
+\begin{itemize}
+    \item \textbf{Amélioration de la Convergence :} Aide à éviter les oscillations et à garantir la convergence même lorsque l'approximation initiale n'est pas proche de la solution.
+    \item \textbf{Stabilité :} Réduit le risque de divergence en adaptant dynamiquement la taille de l'étape.
+\end{itemize}
+
+\paragraph{Implémentation dans Polyfem}
+
+Polyfem implémente la recherche de ligne en intégrant des algorithmes d'optimisation tels que la méthode de Wolfe ou la règle d'Armijo. Ces algorithmes déterminent efficacement le facteur \( \alpha \) tout en maintenant un équilibre entre rapidité de convergence et stabilité numérique.
+
+\subsubsection{Synthèse des Méthodes}
+
+Polyfem combine ces techniques de résolution linéaire et non-linéaire pour offrir une solution robuste et efficace aux problèmes de simulation des corps souples :
+\begin{itemize}
+    \item \textbf{Pardiso} est utilisé pour résoudre rapidement les systèmes linéaires résultant des itérations de Newton-Raphson.
+    \item La \textbf{Méthode de Newton-Raphson} permet de traiter les non-linéarités inhérentes aux matériaux hyperélastiques et aux contacts multiples.
+    \item La \textbf{Recherche de Ligne} améliore la robustesse de la méthode de Newton-Raphson, assurant une convergence stable même dans des configurations complexes.
+\end{itemize}
+
+Grâce à cette combinaison, Polyfem est capable de gérer des simulations complexes de corps souples avec une grande précision et une efficacité computationnelle élevée, répondant aux exigences des applications industrielles et scientifiques modernes.
+
+\subsubsection{Illustration des Méthodes de Résolution}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{solveurs_polyfem.png}
+    \caption{Schéma illustrant l'intégration des solveurs linéaires et non-linéaires dans Polyfem. Pardiso résout les systèmes linéaires, tandis que la méthode de Newton-Raphson et la recherche de ligne gèrent les non-linéarités et optimisent la convergence des simulations.}
+    \label{fig:solveurs_polyfem}
+\end{figure}
+
+\subsubsection{Avantages de l'Approche Polyfem}
+\begin{itemize}
+    \item \textbf{Efficacité :} Résolution rapide des systèmes linéaires et non-linéaires grâce à l'utilisation de solveurs optimisés comme Pardiso.
+    \item \textbf{Robustesse :} Techniques avancées comme la recherche de ligne assurent la stabilité et la convergence des simulations même dans des scénarios complexes.
+    \item \textbf{Flexibilité :} Supporte une variété de modèles d'élasticité et peut être adapté à différents types de matériaux et conditions de charge.
+    \item \textbf{Intégration :} Fonctionne de manière transparente avec les outils de visualisation comme Paraview pour une analyse complète des résultats.
+\end{itemize}
+
+\subsection{Paraview}
+
+\textbf{Paraview} est un outil de visualisation open-source utilisé pour l'extraction et l'analyse des données simulées. Il permet de représenter graphiquement les déformations, les forces de contact, et autres variables pertinentes issues des simulations. Grâce à ses capacités de traitement en temps réel et de rendu haute performance, Paraview facilite l'interprétation des résultats et l'identification des zones critiques nécessitant une optimisation.
+
+\subsubsection{Structure des Fichiers de Sortie}
+
+Paraview organise les données de simulation en utilisant une structure hiérarchique de fichiers, permettant une gestion efficace des données temporelles et spatiales. Les principaux types de fichiers utilisés sont les suivants :
+
+\begin{itemize}
+    \item \textbf{Fichier \texttt{.pvd} :}  
+    Le fichier \texttt{.pvd} (Paraview Data) sert de conteneur principal qui référence plusieurs fichiers de maillage et de données temporelles. Il agit comme un index permettant à Paraview de gérer les données réparties sur différents pas de temps.
+    
+    \item \textbf{Fichiers \texttt{.vtm} :}  
+    Chaque fichier \texttt{.vtm} (VTK MultiBlock) correspond à un pas de temps spécifique dans la simulation. Il contient la géométrie et la topologie des éléments de maillage pour ce pas de temps particulier, ainsi que des références aux fichiers \texttt{.vtu} contenant les données scalaires et vectorielles.
+    
+    \item \textbf{Fichiers \texttt{.vtu} :}  
+    Les fichiers \texttt{.vtu} (VTK Unstructured Grid) stockent les données non structurées associées aux maillages. Ils contiennent des informations détaillées telles que les forces de contact, les contraintes, les déplacements, et d'autres variables pertinentes pour chaque point du maillage.
+\end{itemize}
+
+\subsubsection{Processus de Génération et Intégration}
+
+Lors d'une simulation, pour chaque pas de temps \( t_i \), un fichier \texttt{.vtm} et un fichier \texttt{.vtu} sont générés :
+
+\begin{enumerate}
+    \item \textbf{Génération du Maillage :}  
+    À chaque pas de temps, le maillage tétraédrique est mis à jour et stocké dans un fichier \texttt{.vtm}. Ce fichier contient la structure géométrique de la simulation à ce moment précis.
+    
+    \item \textbf{Enregistrement des Données :}  
+    Les données physiques telles que les forces de contact et les contraintes sont enregistrées dans un fichier \texttt{.vtu} associé. Chaque \texttt{.vtu} contient les valeurs scalaires et vectorielles nécessaires pour analyser le comportement des corps souples.
+    
+    \item \textbf{Indexation dans le Fichier \texttt{.pvd} :}  
+    Le fichier \texttt{.pvd} référence tous les fichiers \texttt{.vtm} et \texttt{.vtu} générés au cours de la simulation. Cela permet à Paraview de charger et de naviguer facilement à travers les différents pas de temps.
+\end{enumerate}
+
+\subsubsection{Exemple de Fonctionnement}
+
+Supposons une simulation comportant \( N \) pas de temps. La structure des fichiers serait organisée comme suit :
+
+\begin{itemize}
+    \item \texttt{simulation.pvd}  
+    \begin{itemize}
+        \item \texttt{time\_step\_1.vtm}
+        \begin{itemize}
+            \item \texttt{time\_step\_1.vtu} (Données scalaires et vectorielles)
+        \end{itemize}
+        \item \texttt{time\_step\_2.vtm}
+        \begin{itemize}
+            \item \texttt{time\_step\_2.vtu} (Données scalaires et vectorielles)
+        \end{itemize}
+        \item \dots
+        \item \texttt{time\_step\_N.vtm}
+        \begin{itemize}
+            \item \texttt{time\_step\_N.vtu} (Données scalaires et vectorielles)
+        \end{itemize}
+    \end{itemize}
+\end{itemize}
+
+Lorsque \texttt{simulation.pvd} est chargé dans Paraview, celui-ci peut automatiquement identifier et charger les maillages et données associées à chaque pas de temps, permettant ainsi une visualisation fluide de l'évolution de la simulation.
+
+\subsubsection{Accès aux Données}
+
+Paraview permet d'accéder facilement aux différentes variables enregistrées dans les fichiers \texttt{.vtu}. Par exemple :
+
+\begin{itemize}
+    \item \textbf{Forces de Contact :}  
+    Les forces de contact peuvent être visualisées sous forme de vecteurs ou de scalaires appliqués aux points de contact, facilitant l'analyse des interactions entre les corps souples.
+    
+    \item \textbf{Contraintes :}  
+    Les contraintes internes, telles que les contraintes de Von Mises, peuvent être représentées en couleurs sur le maillage, permettant d'identifier les zones de forte déformation ou de concentration de contraintes.
+    
+    \item \textbf{Déplacements :}  
+    Les déplacements des points du maillage peuvent être visualisés pour observer les déformations globales et locales des corps souples.
+\end{itemize}
+
+\subsubsection{Visualisation Temporelle}
+
+Grâce au fichier \texttt{.pvd}, Paraview peut interpoler et animer les données sur les différents pas de temps, offrant une vue dynamique de la simulation. Cette fonctionnalité est essentielle pour comprendre les processus transitoires et l'évolution des interactions tribologiques au fil du temps.
+
+\subsubsection{Illustration de la Structure des Fichiers}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{structure_paraview.png}
+    \caption{Structure hiérarchique des fichiers utilisés par Paraview pour organiser les données de simulation. Le fichier \texttt{.pvd} référence plusieurs fichiers \texttt{.vtm}, chacun contenant un fichier \texttt{.vtu} avec les données associées à un pas de temps spécifique.}
+    \label{fig:structure_paraview}
+\end{figure}
+
+\subsection{Avantages de l'Utilisation de Paraview}
+
+\begin{itemize}
+    \item \textbf{Flexibilité :}  
+    Paraview supporte une large gamme de formats de données et permet de personnaliser les visualisations selon les besoins spécifiques de l'utilisateur.
+    
+    \item \textbf{Performance :}  
+    Optimisé pour gérer de grandes quantités de données, Paraview maintient une performance élevée même avec des simulations complexes et volumineuses.
+    
+    \item \textbf{Interactivité :}  
+    Permet une exploration interactive des résultats, avec des outils de filtrage, de sélection et de transformation des données en temps réel.
+    
+    \item \textbf{Extensibilité :}  
+    Grâce à son architecture modulaire et ses plugins, Paraview peut être étendu pour intégrer de nouvelles fonctionnalités ou formats de données.
+\end{itemize}
+
+\subsection{Illustration du Cadre de Simulation}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{cadre_simulation.png}
+    \caption{Schéma illustrant le cadre de simulation intégrant les méthodes IPC, CCD, Polyfem et Paraview.}
+    \label{fig:cadre_simulation}
+\end{figure}
+
+\subsection{Avantages du Cadre de Simulation}
+
+\begin{itemize}
+    \item \textbf{Précision :} Les méthodes IPC et CCD assurent une détection et une résolution précises des contacts et des collisions, même dans des scénarios complexes.
+    \item \textbf{Efficacité :} L'utilisation de Polyfem optimise la résolution des équations différentielles, réduisant le temps de calcul nécessaire.
+    \item \textbf{Flexibilité :} Le cadre permet de simuler une grande variété de configurations géométriques et de conditions de contact grâce à la génération de maillages tétraédriques adaptatifs.
+    \item \textbf{Visualisation :} Paraview offre une interface intuitive pour l'analyse visuelle des résultats, facilitant la validation et l'optimisation des simulations.
+\end{itemize}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{figures/soft_body.jpg}
+    \caption{Discr\'etisation d’un corps souple en masses concentr\'ees. La masse du corps est distribu\'ee sur des masses discr\`etes $m_i$, reli\'ees par des forces internes $f_{ij}$.}
+    \label{fig:soft_body}
+\end{figure}

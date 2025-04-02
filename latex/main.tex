@@ -1,0 +1,48 @@
+\documentclass[letterpaper%
+, twoside%
+, 12pt%
+,memoire%
+,french
+,creativecommons,hyperref,withAlgo2e%
+]{thETS}
+\newcites{refs}{LISTE DE RÉFÉRENCES}
+
+\input{Preamble/title_page}
+\input{Preamble/jury_page}
+\input{Preamble/avant_propos}
+\input{Preamble/acknowledgments}
+\input{Preamble/sommaire}
+\input{Preamble/abstract}
+
+\input{Preamble/tableofcontents.tex}
+\input{Preamble/listofabbr}
+\input{Preamble/listoffigures}
+\input{Preamble/listofsymbols}
+\input{Preamble/listoftables}
+
+\pagenumbering{arabic}
+\reversemarginpar
+
+\include{Chapters/chapter1}
+\include{Chapters/chapter2}
+\include{Chapters/chapter3}
+\include{Chapters/chapter4}
+\include{Chapters/chapter5}
+\include{Chapters/chapter6}
+
+\appendix
+\multiannexe
+
+\include{Chapters/appendix}
+
+\cleardoublepage
+\begin{spacing}{1}
+    \setlength{\bibsep}{\baselineskip}
+    \setlength{\bibhang}{3em}
+    \bibliographystyle{bibETS}
+    \phantomsection
+    \addcontentsline{toc}{chapter}{BIBLIOGRAPHIE}
+    \bibliography{biblio_fr}
+\end{spacing}
+
+\end{document}
