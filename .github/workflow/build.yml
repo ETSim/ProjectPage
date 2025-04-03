@@ -1,0 +1,54 @@
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install TikZ dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-full biber
+
+      - name: Compile Paper document
+        run: |
+          # Navigate to the paper directory
+          cd latex/memoire
+          
+          # Compile the main document
+          latexmk -pdf -bibtex main.tex
+          
+          # Run multiple passes to ensure all references are resolved
+          pdflatex main.tex
+          biber main
+          pdflatex main.tex
+          pdflatex main.tex
+      
+      - name: Compile Machine Guide document
+        run: |
+          # Navigate to the machine_guide directory
+          cd latex/machine_guide
+          
+          # Compile the main document
+          latexmk -pdf -bibtex main.tex
+          
+          # Run multiple passes to ensure all references are resolved
+          pdflatex main.tex
+          biber main
+          pdflatex main.tex
+          pdflatex main.tex
+
+      - name: Upload PDFs
+        uses: actions/upload-artifact@v4
+        with:
+          name: latex-pdfs
+          path: |
+            static/pdfs/paper.pdf
+            static/pdfs/machine_guide.pdf
