@@ -24,9 +24,9 @@ jobs:
           find . -type f -name "*.png" | sort
           find . -type f -name "*.bib" | sort
           
-      - name: Compile Paper document
+      - name: Compile memoire document
         run: |
-          # Navigate to the paper directory
+          # Navigate to the memoire directory
           cd latex/memoire
           
           # Debug - list files in current directory
@@ -61,7 +61,7 @@ jobs:
           if [ -f "main.pdf" ]; then
             echo "PDF successfully generated"
             mkdir -p ../../static/pdfs
-            cp main.pdf ../../static/pdfs/paper.pdf
+            cp main.pdf ../../static/pdfs/memoire.pdf
           else
             echo "Error: PDF was not generated"
             cat main.log
@@ -70,11 +70,11 @@ jobs:
       
       - name: Compile Machine Guide document
         run: |
-          # Navigate to the machine_guide directory
-          cd latex/machine_guide
+          # Navigate to the setup directory
+          cd latex/setup
           
           # Debug - list files in current directory
-          echo "Contents of latex/machine_guide:"
+          echo "Contents of latex/setup:"
           ls -la
           
           # Compile the main document with more verbose output
@@ -90,7 +90,7 @@ jobs:
           if [ -f "main.pdf" ]; then
             echo "PDF successfully generated"
             mkdir -p ../../static/pdfs
-            cp main.pdf ../../static/pdfs/machine_guide.pdf
+            cp main.pdf ../../static/pdfs/setup.pdf
           else
             echo "Error: PDF was not generated"
             cat main.log
@@ -102,5 +102,5 @@ jobs:
         with:
           name: latex-pdfs
           path: |
-            static/pdfs/paper.pdf
-            static/pdfs/machine_guide.pdf
+            static/pdfs/memoire.pdf
+            static/pdfs/setup.pdf
