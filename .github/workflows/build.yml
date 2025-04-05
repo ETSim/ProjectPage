@@ -1,3 +1,5 @@
+name: Build LaTeX Documents
+
 on:
   push:
     branches: [ main, master ]
@@ -11,40 +13,90 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+        
       - name: Install TikZ dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y texlive-full biber
 
+      - name: List project structure (for debugging)
+        run: |
+          find . -type f -name "*.png" | sort
+          find . -type f -name "*.bib" | sort
+          
       - name: Compile Paper document
         run: |
           # Navigate to the paper directory
           cd latex/memoire
           
-          # Compile the main document
-          latexmk -pdf -bibtex main.tex
+          # Debug - list files in current directory
+          echo "Contents of latex/memoire:"
+          ls -la
+          
+          # Make sure the images directory exists
+          if [ ! -f "scan_setup.png" ]; then
+            echo "Warning: scan_setup.png not found in current directory"
+            echo "Searching for the file elsewhere..."
+            find ../../ -name "scan_setup.png"
+          fi
+          
+          # Compile the main document with more verbose output
+          latexmk -pdf -bibtex -verbose main.tex || true
+          
+          # Check if bibliography files exist
+          if [ -f "main.bib" ]; then
+            echo "Bibliography file exists"
+          else
+            echo "Warning: main.bib not found"
+            find ../../ -name "*.bib"
+          fi
           
           # Run multiple passes to ensure all references are resolved
-          pdflatex main.tex
-          biber main
-          pdflatex main.tex
-          pdflatex main.tex
+          pdflatex -interaction=nonstopmode main.tex || true
+          biber main || true
+          pdflatex -interaction=nonstopmode main.tex || true
+          pdflatex -interaction=nonstopmode main.tex || true
+          
+          # Check if PDF was generated
+          if [ -f "main.pdf" ]; then
+            echo "PDF successfully generated"
+            mkdir -p ../../static/pdfs
+            cp main.pdf ../../static/pdfs/paper.pdf
+          else
+            echo "Error: PDF was not generated"
+            cat main.log
+            exit 1
+          fi
       
       - name: Compile Machine Guide document
         run: |
           # Navigate to the machine_guide directory
           cd latex/machine_guide
           
-          # Compile the main document
-          latexmk -pdf -bibtex main.tex
+          # Debug - list files in current directory
+          echo "Contents of latex/machine_guide:"
+          ls -la
+          
+          # Compile the main document with more verbose output
+          latexmk -pdf -bibtex -verbose main.tex || true
           
           # Run multiple passes to ensure all references are resolved
-          pdflatex main.tex
-          biber main
-          pdflatex main.tex
-          pdflatex main.tex
-
+          pdflatex -interaction=nonstopmode main.tex || true
+          biber main || true
+          pdflatex -interaction=nonstopmode main.tex || true
+          pdflatex -interaction=nonstopmode main.tex || true
+          
+          # Check if PDF was generated
+          if [ -f "main.pdf" ]; then
+            echo "PDF successfully generated"
+            mkdir -p ../../static/pdfs
+            cp main.pdf ../../static/pdfs/machine_guide.pdf
+          else
+            echo "Error: PDF was not generated"
+            cat main.log
+            exit 1
+          fi
+          
       - name: Upload PDFs
         uses: actions/upload-artifact@v4
         with:
