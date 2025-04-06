@@ -1,5 +1,4 @@
 name: Build LaTeX Documents
-
 on:
   push:
     branches: [ main, master ]
@@ -14,11 +13,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         
+      - name: Cache TeX Live
+        id: cache-texlive
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/texlive
+            ~/.texlive
+          key: ${{ runner.os }}-texlive-${{ hashFiles('.github/workflows/build.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-texlive-
+      
       - name: Install TikZ dependencies
+        if: steps.cache-texlive.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y texlive-full biber
-
+      
       - name: List project structure (for debugging)
         run: |
           find . -type f -name "*.png" | sort
