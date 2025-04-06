@@ -1,4 +1,4 @@
-# 3D Friction Surface Simulation Validation
+# Friction Surface Fabrication and Simulation Validation
 
 ## Overview
 
